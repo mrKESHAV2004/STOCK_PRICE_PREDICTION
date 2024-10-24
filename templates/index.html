@@ -1,0 +1,171 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Prediction</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .plot-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .plot {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metrics {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            flex: 1;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #prediction-result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align:center">Stock Price Prediction</h1>
+        
+        <div class="metrics">
+            <div class="metric-card">
+                <h3>Mean Squared Error</h3>
+                <p>{{ mse }}</p>
+            </div>
+            <div class="metric-card">
+                <h3>R-squared Score</h3>
+                <p>{{ r2 }}</p>
+            </div>
+        </div>
+
+        <div class="plot-container">
+            <div class="plot" id="scatter-plot"></div>
+            <div class="plot" id="trend-plot"></div>
+        </div>
+
+        <div class="container">
+            <h2>Make a Prediction</h2>
+            <form id="prediction-form">
+                <div class="form-group">
+                    <label for="low">Low Price:</label>
+                    <input type="number" id="low" name="low" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="high">High Price:</label>
+                    <input type="number" id="high" name="high" step="0.01" required>
+                </div>
+                <button type="submit">Predict</button>
+            </form>
+            <div id="prediction-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize plots
+        var scatter_data = {{ scatter_json | safe }};
+        var trend_data = {{ trend_json | safe }};
+        
+        Plotly.newPlot('scatter-plot', scatter_data.data, scatter_data.layout);
+        Plotly.newPlot('trend-plot', trend_data.data, trend_data.layout);
+
+        // Handle form submission
+        $('#prediction-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            $.ajax({
+                url: '/predict',
+                method: 'POST',
+                data: $(this).serialize(),
+                success: function(response) {
+                    const resultDiv = $('#prediction-result');
+                    if (response.success) {
+                        resultDiv.html(`<strong>Predicted Price:</strong> $${response.prediction}`)
+                            .removeClass('error')
+                            .addClass('success')
+                            .show();
+                    } else {
+                        resultDiv.html(`<strong>Error:</strong> ${response.error}`)
+                            .removeClass('success')
+                            .addClass('error')
+                            .show();
+                    }
+                },
+                error: function() {
+                    $('#prediction-result')
+                        .html('<strong>Error:</strong> Failed to make prediction')
+                        .removeClass('success')
+                        .addClass('error')
+                        .show();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
